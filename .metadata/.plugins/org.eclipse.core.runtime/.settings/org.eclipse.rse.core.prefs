@@ -1,3 +1,6 @@
+TerminalPrefInvertColors=true
 activeuserprofiles=Ironsquishy;Team
 eclipse.preferences.version=1
 org.eclipse.rse.systemtype.local.systemType.defaultUserId=core6_000
+overriddenByCSS=,TerminalPrefInvertColors,
+useridperkey=Ironsquishy.Local\=core6_000;
