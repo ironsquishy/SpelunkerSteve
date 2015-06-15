@@ -1,0 +1,7 @@
+package com.games.spelunkersteve.characters;
+
+import java.lang.object;
+
+public class PlateTexture extends object {
+
+}

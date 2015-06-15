@@ -1,0 +1,18 @@
+package com.games.spelunkersteve.characters;
+
+import org.andengine.entity.sprite.Sprite;
+import org.andengine.entity.sprite.TiledSprite;
+import org.andengine.entity.sprite.vbo.ITiledSpriteVertexBufferObject;
+import org.andengine.opengl.texture.region.ITiledTextureRegion;
+
+public class PlateTexture extends TiledSprite {
+
+	public PlateTexture(float pX, float pY, float pWidth, float pHeight,
+			ITiledTextureRegion pTiledTextureRegion,
+			ITiledSpriteVertexBufferObject pTiledSpriteVertexBufferObject) {
+		super(pX, pY, pWidth, pHeight, pTiledTextureRegion,
+				pTiledSpriteVertexBufferObject);
+		// TODO Auto-generated constructor stub
+	}
+
+}
