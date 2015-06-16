@@ -1,0 +1,44 @@
+package com.games.spelunkersteve.characters;
+
+import org.andengine.engine.handler.physics.PhysicsHandler;
+import org.andengine.entity.sprite.AnimatedSprite;
+import org.andengine.entity.sprite.Sprite;
+import org.andengine.entity.sprite.TiledSprite;
+import org.andengine.entity.sprite.vbo.ITiledSpriteVertexBufferObject;
+import org.andengine.opengl.texture.region.ITiledTextureRegion;
+
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.physics.box2d.Body;
+
+public class PlateTexture extends TiledSprite {
+	
+	private Sprite texturePlates;
+	private final PhysicsHandler mPhysicsHandler;
+	private Body mBody;
+
+	public PlateTexture(float pX, float pY, float pWidth, float pHeight,
+			ITiledTextureRegion pTiledTextureRegion,
+			ITiledSpriteVertexBufferObject pTiledSpriteVertexBufferObject) {
+		super(pX, pY, pWidth, pHeight, pTiledTextureRegion,
+				pTiledSpriteVertexBufferObject);
+		// TODO Auto-generated constructor stub
+		  this.mPhysicsHandler = new PhysicsHandler(this);
+		  
+	        this.registerUpdateHandler(this.mPhysicsHandler);
+			try {
+
+			this.texturePlates = new Sprite(0,0,pTiledTextureRegion, pTiledSpriteVertexBufferObject);
+			} finally {
+				if (this.texturePlates!=null)
+					this.texturePlates.dispose();
+			}
+			
+			mBody.setLinearVelocity(new Vector2(-5.0f,mBody.getLinearVelocity().y));
+		}
+	
+			
+	}
+
+	
+
+}

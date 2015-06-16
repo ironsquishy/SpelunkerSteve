@@ -1,3 +1,10 @@
+allocPanel.Col0=38
+allocPanel.Col00=90
+allocPanel.Col1=115
+allocPanel.Col2=38
+allocPanel.Col3=52
+allocPanel.Col4=52
+allocPanel.stack.col0=642
 ddms.logcat.auotmonitor.level=error
 ddms.logcat.automonitor.userprompt=true
 devicePanel.Col0=140

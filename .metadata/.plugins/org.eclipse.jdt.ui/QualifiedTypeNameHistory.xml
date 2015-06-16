@@ -2,4 +2,5 @@
 <qualifiedTypeNameHistroy>
 <fullyQualifiedTypeName name="org.andengine.entity.sprite.TiledSprite"/>
 <fullyQualifiedTypeName name="org.andengine.entity.primitive.Rectangle"/>
+<fullyQualifiedTypeName name="com.games.spelunkersteve.characters.PlateTexture"/>
 </qualifiedTypeNameHistroy>
