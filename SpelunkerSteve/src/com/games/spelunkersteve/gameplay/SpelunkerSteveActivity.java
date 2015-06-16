@@ -8,11 +8,13 @@ import org.andengine.engine.options.EngineOptions;
 import org.andengine.engine.options.ScreenOrientation;
 import org.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
 import org.andengine.entity.primitive.Line;
+import org.andengine.entity.primitive.Rectangle;
 import org.andengine.entity.scene.IOnSceneTouchListener;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.scene.background.AutoParallaxBackground;
 import org.andengine.entity.scene.background.ParallaxBackground.ParallaxEntity;
 import org.andengine.entity.sprite.Sprite;
+import org.andengine.entity.sprite.TiledSprite;
 import org.andengine.entity.util.FPSLogger;
 import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
@@ -39,333 +41,498 @@ import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.games.spelunkersteve.characters.DrawableSprites;
 import com.games.spelunkersteve.characters.Fish;
+import com.games.spelunkersteve.characters.PlateTexture;
 import com.games.spelunkersteve.characters.ScubaDiver;
 
-public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements IOnSceneTouchListener {
-		
+
+
+public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
+		IOnSceneTouchListener {
+
 	/** Camera **/
-	private static final int CAMERA_WIDTH  = 640;
+	private static final int CAMERA_WIDTH = 640;
 	private static final int CAMERA_HEIGHT = 480;
-	private static final int CAMERA_CENTER_X = CAMERA_WIDTH/2;
-	private static final int CAMERA_CENTER_Y = CAMERA_HEIGHT/2;
-	
-	
+	private static final int CAMERA_CENTER_X = CAMERA_WIDTH / 2;
+	private static final int CAMERA_CENTER_Y = CAMERA_HEIGHT / 2;
+
+	private static float deltaTime;
+
+	private static Random randNum;
+
 	/** Sprite sheets **/
 	private static final int SCUBA_DIVER_SHEET_COLS = 2;
 	private static final int SCUBA_DIVER_SHEET_ROWS = 2;
-	
+	private static final int TILE_TEXTURE_COLS = 3;
+	private static final int TILE_TEXTURE_ROWS = 2;
+
 	/** Scenes **/
-	//private Scene mSplashScene;
+	// private Scene mSplashScene;
 	private Scene mGameScene;
-	
-	
+
 	private BitmapTextureAtlas mTextureAtlasScubaDiver;
 	private BitmapTextureAtlas mTextureAtlasAutoParallax;
-	
+	private BitmapTextureAtlas mTextureAtlasPlates;
+
 	private ITextureRegion mAutoParallaxLayerBack;
 	private ITextureRegion mAutoParallaxLayerMid;
 	private ITextureRegion mAutoParallaxLayerFront;
-	
+
 	// Parallax background.
 	private ParallaxEntity mParallaxEntity;
 	private Sprite mCaveCeiling, mCaveFloor;
-	
-	//Tiled textture regions for animated objects.
+
+	// Tiled textture regions for animated objects.
 	private TiledTextureRegion mTextureRegionScubaDiver;
-	
-	
-	//Animated objects.
+	private TiledTextureRegion mTextureRegionPlates;
+
+	// Other Sprites.
+	private PlateTexture plates;
+	private Body plateBody;
+
+	// Animated objects.
 	private ScubaDiver mScubaDiver;
 	private Body mDiverBody;
-	
-	//private DrawableSprites sprites;
-	
+
+	// private DrawableSprites sprites;
+
 	// Physics.
 	private PhysicsWorld mPhysicsWorld;
-	
-	//Top and bottom borders.
-	private static  Line hitMeTop;
-	private static  Line hitMeBottom;
-	
-//	Camera camera;	
+
+	// Top and bottom borders.
+	private static Line hitMeTop;
+	private static Line hitMeBottom;
+	private static Line DiverRightBorder;
+
+	// Camera camera;
 
 	/*************************************************
 	 ************** Inherited methods ****************
 	 *************************************************/
-	
+
 	@Override
 	public EngineOptions onCreateEngineOptions() {
 		// Create a new camera object for the scene.
-		Camera camera = new Camera(0,0,CAMERA_WIDTH,CAMERA_HEIGHT);
-		// Return an engine object - full screen,fixed landscape, scaling scheme, width and height of scene.
-		EngineOptions engineOptions = new EngineOptions(true,ScreenOrientation.LANDSCAPE_FIXED, new RatioResolutionPolicy(CAMERA_WIDTH, CAMERA_HEIGHT),camera);
+		Camera camera = new Camera(0, 0, CAMERA_WIDTH, CAMERA_HEIGHT);
+		// Return an engine object - full screen,fixed landscape, scaling
+		// scheme, width and height of scene.
+		EngineOptions engineOptions = new EngineOptions(true,
+				ScreenOrientation.LANDSCAPE_FIXED, new RatioResolutionPolicy(
+						CAMERA_WIDTH, CAMERA_HEIGHT), camera);
 		// Set dithering to remove horizontal lines.
 		engineOptions.getRenderOptions().setDithering(true);
-		
+
 		return engineOptions;
-		}
-	
+	}
 
 	@Override
 	protected void onCreateResources() throws IOException {
-		
-		// Set the graphics assets base directory.
-        BitmapTextureAtlasTextureRegionFactory.setAssetBasePath("gfx/");
-        
-        // Parallax background assets.
-        this.mTextureAtlasAutoParallax = new BitmapTextureAtlas(this.getTextureManager(), 1024, 1024, TextureOptions.DEFAULT);
-        this.mAutoParallaxLayerBack  = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mTextureAtlasAutoParallax, this.getAssets(), "temp_water.png", 0, 188);
-        this.mAutoParallaxLayerMid   = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mTextureAtlasAutoParallax, this, "temp_ceiling.png", 0, 669);
-        this.mAutoParallaxLayerFront = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mTextureAtlasAutoParallax, this, "temp_floor.png", 0, 0);
-        this.mTextureAtlasAutoParallax.load(); 
-        
-        // Diver assets.
-        this.mTextureAtlasScubaDiver = new BitmapTextureAtlas(this.getTextureManager(), 1300, 1390, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
-        this.mTextureRegionScubaDiver = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mTextureAtlasScubaDiver, this, "scuba_diver_boy.png", 0, 0, SCUBA_DIVER_SHEET_COLS, SCUBA_DIVER_SHEET_ROWS);
-        this.mTextureAtlasScubaDiver.load();
-        
-        // Cave obstacle assets.
-        
-	}
 
+		loadGFx();
+	}
+	
+	/**
+	 * @author Allen Space, Sebastian Babb
+	 * @brief The method was design for code readability.
+	 * */
+	private void loadGFx() {
+		// TODO Auto-generated method stub
+
+		/** Set Base directory **/
+		BitmapTextureAtlasTextureRegionFactory.setAssetBasePath("gfx/");
+
+		/** Background **/
+		this.mTextureAtlasAutoParallax = new BitmapTextureAtlas(
+				this.getTextureManager(), 1024, 1024, TextureOptions.DEFAULT);
+
+		/** Set Background **/
+		Log.i("IMAGES", "Get background image....");
+		this.mAutoParallaxLayerBack = BitmapTextureAtlasTextureRegionFactory
+				.createFromAsset(this.mTextureAtlasAutoParallax,
+						this.getAssets(), "underwater.png", 0, 188);
+
+		this.mAutoParallaxLayerMid = BitmapTextureAtlasTextureRegionFactory
+				.createFromAsset(this.mTextureAtlasAutoParallax, this,
+						"temp_ceiling.png", 0, 669);
+
+		this.mAutoParallaxLayerFront = BitmapTextureAtlasTextureRegionFactory
+				.createTiledFromAsset(this.mTextureAtlasAutoParallax, this,
+						"plates.png", 0, 0, TILE_TEXTURE_COLS,
+						TILE_TEXTURE_ROWS);
+
+		this.mTextureAtlasAutoParallax.load();
+
+		// Setting up foreground...
+		this.mTextureAtlasPlates = new BitmapTextureAtlas(
+				this.getTextureManager(), 256, 128,
+				TextureOptions.BILINEAR_PREMULTIPLYALPHA);
+
+		this.mTextureRegionPlates = BitmapTextureAtlasTextureRegionFactory
+				.createTiledFromAsset(this.mTextureAtlasPlates, this,
+						"plates.png", 0, 0, TILE_TEXTURE_COLS,
+						TILE_TEXTURE_ROWS);
+
+		this.mTextureAtlasPlates.load();
+
+		// Diver assets.
+		this.mTextureAtlasScubaDiver = new BitmapTextureAtlas(
+				this.getTextureManager(), 2048, 1024,
+				TextureOptions.BILINEAR_PREMULTIPLYALPHA);
+
+		// Diver texture region load.
+		this.mTextureRegionScubaDiver = BitmapTextureAtlasTextureRegionFactory
+				.createTiledFromAsset(this.mTextureAtlasScubaDiver, this,
+						"scuba_diver_boy.png", 0, 0, SCUBA_DIVER_SHEET_COLS,
+						SCUBA_DIVER_SHEET_ROWS);
+
+		this.mTextureAtlasScubaDiver.load();
+	}
+	
+	/**
+	 * @author Allen Space
+	 * @brief  Code has been changed signficantly since initial given source code.
+	 * */
 	@Override
 	protected Scene onCreateScene() {
+		
 		// Register FPS logger.
 		this.mEngine.registerUpdateHandler(new FPSLogger());
-		
+
 		// Scene
-		this.mGameScene   = new Scene();
-		
+		this.mGameScene = new Scene();
+
 		// Set the screen touch listener.
 		mGameScene.setOnSceneTouchListener(this);
-		
+
+		randNum = new Random();
+
 		// Build the scene.
 		setBackground();
 		
-		//draw sprites.
+		
+
+		// draw sprites.
 		drawDiver();
 		
-		//Set simple collisions.
-		drawBorderLine();	
+
+		// Set simple collisions.
+		drawBorderLine();
 		sceneUpdateHandle();
-		
+
 		return mGameScene;
 	}
-	
-	//User input handler.
+
+	/**
+	 * @author Sebastian Babb
+	 * @brief OnTouch method handler.
+	 * */
 	@Override
 	public boolean onSceneTouchEvent(Scene pScene, TouchEvent pSceneTouchEvent) {
-		if(pSceneTouchEvent.isActionDown()) {
+		if (pSceneTouchEvent.isActionDown()) {
 			// When the screen is touched, make the diver dive.
-			
+
 			mScubaDiver.dive(mDiverBody);
-			
+
 		}
-		
+
 		return false;
 	}
-		
+
 	/*************************************************
 	 ********** Scene helper methods.*****************
 	 *************************************************/
-	
-	// Builds the parallax background effects.
+
+	/**
+	 * @author Allen Space
+	 * @brief Given thet name set the Parallax background which 
+	 * 		  must be called in onCreatScene method.
+	 * */
 	private void setBackground() {
 		// Create a parallax background object.
-		final AutoParallaxBackground autoParallaxBackground = new AutoParallaxBackground(0,0,0,5);
-		final VertexBufferObjectManager vertexBufferObjectManager = this.getVertexBufferObjectManager();		
-		
+		final AutoParallaxBackground autoParallaxBackground = new AutoParallaxBackground(
+				0, 0, 0, 5);
+		final VertexBufferObjectManager vertexBufferObjectManager = this
+				.getVertexBufferObjectManager();
+
 		// Initialize the sprite members that will have collision detection.
-		mCaveCeiling = new Sprite(this.mAutoParallaxLayerMid.getWidth()/2, this.mAutoParallaxLayerBack.getHeight()-this.mAutoParallaxLayerMid.getHeight()/2, this.mAutoParallaxLayerMid, vertexBufferObjectManager);
-		mCaveFloor = new Sprite(this.mAutoParallaxLayerFront.getWidth()/2, this.mAutoParallaxLayerFront.getHeight()/2, this.mAutoParallaxLayerFront, vertexBufferObjectManager);
-		
+		mCaveCeiling = new Sprite(this.mAutoParallaxLayerMid.getWidth() / 2,
+				this.mAutoParallaxLayerBack.getHeight()
+						- this.mAutoParallaxLayerMid.getHeight() / 2,
+				this.mAutoParallaxLayerMid, vertexBufferObjectManager);
+		mCaveFloor = new Sprite(this.mAutoParallaxLayerFront.getWidth() / 8,
+				this.mAutoParallaxLayerFront.getHeight() / 8,
+				this.mAutoParallaxLayerFront, vertexBufferObjectManager);
+
 		// Assemble the parallax background.
 		mParallaxEntity = new ParallaxEntity(-10.0f, this.mCaveCeiling);
-		autoParallaxBackground.attachParallaxEntity(new ParallaxEntity(0.0f, new Sprite(this.mAutoParallaxLayerBack.getWidth()/2, this.mAutoParallaxLayerBack.getHeight()/2, this.mAutoParallaxLayerBack, vertexBufferObjectManager)));
-		autoParallaxBackground.attachParallaxEntity(new ParallaxEntity(-5.0f, this.mCaveFloor));
+		autoParallaxBackground
+				.attachParallaxEntity(new ParallaxEntity(0.0f, new Sprite(
+						this.mAutoParallaxLayerBack.getWidth() / 2,
+						this.mAutoParallaxLayerBack.getHeight() / 2,
+						this.mAutoParallaxLayerBack, vertexBufferObjectManager)));
+		autoParallaxBackground.attachParallaxEntity(new ParallaxEntity(-5.0f,
+				this.mCaveFloor));
 		autoParallaxBackground.attachParallaxEntity(mParallaxEntity);
-		
+
 		// Set the background.
-		this.mGameScene.setBackground(autoParallaxBackground);	
+		this.mGameScene.setBackground(autoParallaxBackground);
 	}
 	
-	// Builds the animated diver sprite.
+	
+	/**
+	 * @author Allen Space
+	 * @brief Sets up the foreground. Initialize and draws TexturePlates
+	 * 		  objects.
+	 * 
+	 * */
+	private void setForeground() {
+		
+		float x = 620;
+		//Offset random interval between (50-480).
+		float y = randNum.nextInt(431) + 50; 
+		float width = 32;
+		float height = 32;
+		
+		Log.i("TexturePlate", "pre Call for Plate class...");
+		
+		this.plates = new PlateTexture(x, y, width, height, mTextureRegionPlates, this.getVertexBufferObjectManager());
+		
+		Log.i("TexturePlate", "Post Call for Plate class...");
+		
+		FixtureDef WALL_FIX = PhysicsFactory.createFixtureDef(0.0f, 0.0f, 0.0f);
+
+		plateBody = PhysicsFactory.createBoxBody(mPhysicsWorld, plates,
+				BodyType.KinematicBody, WALL_FIX);
+		
+		mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(
+				plates, plateBody, true, false));
+
+		
+		Log.i("TexturePlate", "Pre call for plate.move().....");
+		
+		plates.move(plateBody);
+		
+		
+		this.mGameScene.attachChild(this.plates);
+
+	}
+
+	/**
+	 * @author Sebastian Babb
+	 * @brief Method to draw the diver for onCreateScene method.
+	 * 
+	 * */
 	private void drawDiver() {
 		// Initialize a diver object.
 		try {
-			this.mScubaDiver = new ScubaDiver(CAMERA_CENTER_X/4,CAMERA_CENTER_Y, this, mTextureAtlasScubaDiver, mTextureRegionScubaDiver);
+			this.mScubaDiver = new ScubaDiver(CAMERA_CENTER_X / 4,
+					CAMERA_CENTER_Y, this, mTextureAtlasScubaDiver,
+					mTextureRegionScubaDiver);
 			this.mScubaDiver.setSize(100, 80);
-			this.mScubaDiver.animate(200);
+			this.mScubaDiver.animate(150);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		// Attach the diver to the scene.
 		this.mGameScene.attachChild(this.mScubaDiver);
-		
+
 		setPhysics();
 	}
-	
-	
-	//Draws top and bottom line for border collision.
-	public void drawBorderLine()
-	{
-		hitMeTop    = new Line(0,CAMERA_HEIGHT-this.mAutoParallaxLayerMid.getHeight()/2,CAMERA_WIDTH, CAMERA_HEIGHT-this.mAutoParallaxLayerMid.getHeight()/2, 10, this.getVertexBufferObjectManager());
-		hitMeBottom = new Line(0,this.mAutoParallaxLayerFront.getHeight()/2,CAMERA_WIDTH, this.mAutoParallaxLayerFront.getHeight()/2, 10, this.getVertexBufferObjectManager());
-		hitMeTop.setColor(Color.TRANSPARENT);
-		hitMeBottom.setColor(Color.TRANSPARENT);
+
+	/**
+	 * @author Allen Space, Sebastian Babb
+	 * @brief Draws wireframe like borders and bounds.
+	 * */
+	public void drawBorderLine() {
+		
+		hitMeTop = new Line(0, CAMERA_HEIGHT
+				- this.mAutoParallaxLayerMid.getHeight() / 2, CAMERA_WIDTH,
+				CAMERA_HEIGHT - this.mAutoParallaxLayerMid.getHeight() / 2, 10,
+				this.getVertexBufferObjectManager());
+		
+		hitMeBottom = new Line(0, this.mAutoParallaxLayerFront.getHeight() / 2,
+				CAMERA_WIDTH, this.mAutoParallaxLayerFront.getHeight() / 2, 10,
+				this.getVertexBufferObjectManager());
+
+		DiverRightBorder = new Line(150, CAMERA_HEIGHT, 150, 0, 0,
+				this.getVertexBufferObjectManager());
+
+		DiverRightBorder.setColor(Color.GREEN);
+
+		hitMeTop.setColor(Color.WHITE);
+		hitMeBottom.setColor(Color.WHITE);
+		
 		mGameScene.attachChild(hitMeTop);
 		mGameScene.attachChild(hitMeBottom);
-	}
-	
-	
-	 // Sets up the physics environment.
-	private void setPhysics() {
-		// Create a new phsyics world.
-		this.mPhysicsWorld = new PhysicsWorld(new Vector2(0, SensorManager.GRAVITY_MARS),false);
-		// Register the update handler.
-		this.mGameScene.registerUpdateHandler(this.mPhysicsWorld);
-		
-		// Create the fixture definition - how the diver body will respond to impacts against other physics bodies.
-		final FixtureDef SCUBA_FIX = PhysicsFactory.createFixtureDef(0.0f,0.0f,0.0f);
-		
-		// Create the diver's physics body - dynamic.
-		mDiverBody = PhysicsFactory.createCircleBody(mPhysicsWorld, mScubaDiver, BodyType.DynamicBody, SCUBA_FIX);
-		mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(mScubaDiver, mDiverBody, true, false));
-		
-		FixtureDef WALL_FIX = PhysicsFactory.createFixtureDef(0.0f, 0.0f, 0.0f);
-		
-		// Top and bottom limits for the diver .
-		Line top_border    = new Line(0,CAMERA_HEIGHT+10,CAMERA_WIDTH, CAMERA_HEIGHT+1, 1, this.getVertexBufferObjectManager());
-		Line bottom_border = new Line(0, 0,CAMERA_WIDTH, 0, 0, this.getVertexBufferObjectManager());
 
-		PhysicsFactory.createLineBody(mPhysicsWorld, top_border, WALL_FIX);
-		PhysicsFactory.createLineBody(mPhysicsWorld, bottom_border, WALL_FIX);
+		mGameScene.attachChild(DiverRightBorder);
+
+		FixtureDef WALL_FIX = PhysicsFactory.createFixtureDef(0.0f, 0.0f, 0.0f);
+
+		Line top_border = new Line(0, CAMERA_HEIGHT, CAMERA_WIDTH,
+				CAMERA_HEIGHT + 1, 1, this.getVertexBufferObjectManager()); // Top
+																			// bounds
+
+		Line bottom_border = new Line(0, 0, CAMERA_WIDTH, 0, 0,
+				this.getVertexBufferObjectManager()); // Bottom Bounds
+
+		Line right_border = new Line(140, CAMERA_HEIGHT, 140, 0, 0,
+				this.getVertexBufferObjectManager()); 
+
+		PhysicsFactory.createLineBody(mPhysicsWorld, top_border, WALL_FIX); 
+		PhysicsFactory.createLineBody(mPhysicsWorld, bottom_border, WALL_FIX); 
+		PhysicsFactory.createLineBody(mPhysicsWorld, right_border, WALL_FIX);
+		
+		// Attaches to scene.
 		this.mGameScene.attachChild(top_border);
 		this.mGameScene.attachChild(bottom_border);
-		
+		this.mGameScene.attachChild(right_border);
 	}
-	
-	
-	
-	//check if steve hit top or bottom.
-	public void sceneUpdateHandle()
-	{
+
+	/**
+	 * @author Allen Space, Sebastian Babb
+	 * @brief Setting world physics and divers physics.
+	 * 		  In future must need diveded so diver physics is set in different method.
+	 * */
+	private void setPhysics() {
+
+		// Create a new phsyics world.
+		this.mPhysicsWorld = new PhysicsWorld(new Vector2(0,
+				SensorManager.GRAVITY_MARS), false);
+
+		// Register the update handler.
+		this.mGameScene.registerUpdateHandler(this.mPhysicsWorld);
+
+		// Create the fixture definition - how the diver body will respond to
+		// impacts against other physics bodies.
+		final FixtureDef SCUBA_FIX = PhysicsFactory.createFixtureDef(0.0f,
+				0.0f, 0.0f);
+
+		// create plate texture physics..
+
+		// Create the diver's physics body - dynamic.
+		mDiverBody = PhysicsFactory.createCircleBody(mPhysicsWorld,
+				mScubaDiver, BodyType.DynamicBody, SCUBA_FIX);
+		mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(
+				mScubaDiver, mDiverBody, true, false));
+
+	}
+
+	/**
+	 * @author Allen Space, Sebastian Babb
+	 * @brief Handles updates on each frame.
+	 * */
+	public void sceneUpdateHandle() {
 		mGameScene.registerUpdateHandler(new IUpdateHandler() {
 			@Override
-			public void reset(){}
-		
+			public void reset() {
+			}
+
 			@Override
 			public void onUpdate(final float pSecondsElpased) {
 				
-				if(mScubaDiver.collidesWith(hitMeTop)) {
-					hitMeTop.setColor(Color.RED);
-				}else {
-					hitMeTop.setColor(Color.TRANSPARENT);
+				deltaTime += pSecondsElpased;
+				
+				if(deltaTime %2 > 0 && deltaTime%2 < 0.025)
+				{
+					setForeground();
 				}
-				if(mScubaDiver.collidesWith(hitMeBottom)) {
+				
+				if (mScubaDiver.collidesWith(hitMeTop)) {
+					hitMeTop.setColor(Color.RED);
+				} else {
+					hitMeTop.setColor(Color.YELLOW);
+				}
+				if (mScubaDiver.collidesWith(hitMeBottom)) {
 					hitMeBottom.setColor(Color.RED);
-				}else {
-					hitMeBottom.setColor(Color.TRANSPARENT);
+				} else {
+					hitMeBottom.setColor(Color.YELLOW);
+				}
+
+				if (mScubaDiver.collidesWith(DiverRightBorder)) {
+					DiverRightBorder.setColor(Color.RED);
+				} else {
+					DiverRightBorder.setColor(Color.GREEN);
 				}
 			}
 		});
 
 	}
-	
 
 }
 
 /*
  * 
- 	private BitmapTextureAtlas mTextureAtlasFish;
- 	private TiledTextureRegion mTextureRegionFish;
- 	private Fish littleFishy;
-	private Body mFishyBody;
- 		//Fish Texture generator for onCreateResource.
-        //this.mTextureAtlasFish = new BitmapTextureAtlas(this.getTextureManager(), 1300, 1390, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
-        //this.mTextureRegionFish = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mTextureAtlasFish, this, "fish.png", 0, 0, 2, 2);
-        //this.mTextureAtlasFish.load();
- public void drawFish(int location)
-	{			
-		// Initialize a diver object.
-				try {
-					this.littleFishy = new Fish(CAMERA_WIDTH, location, this, mTextureAtlasFish, mTextureRegionFish);
-					Log.i(TAG_FISH, "Fish object decleration: ");
-					Log.i(TAG_FISH, "Init fish at: " + location);
-					this.littleFishy.setSize(80, 80);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				// Attach the fish to the scene.
-				
-				this.mGameScene.attachChild(littleFishy);
-				Log.i(TAG_FISH, "Attched enabled to Fish object... ");
-				
-				setFishPhysics();
-				Log.i(TAG_FISH, "Physics set for Fish object... ");
-	}
-	
-//Update on for fish object.
-	public void updateFishScene() 
-	{
-		mGameScene.registerUpdateHandler(new IUpdateHandler() {
-			@Override
-			public void reset(){}
-		
-			@Override
-			public void onUpdate(final float pSecondsElpased) {
-				deltaTime += pSecondsElpased;
-				
-				if(deltaTime > 5.0f && deltaTime < 10.f){
-					
-					littleFishy.moveFishRight(mFishyBody);
-					
-				}else if (deltaTime > 10.f){
-					
-					littleFishy.moveFishLeft(mFishyBody);
-				
-				}else{
-					
-					littleFishy.moveFishLeft(mFishyBody);
-				}
-			}
-		});
-	}
-	
-	public void setFishPhysics()
-	{
-		// Create a new phsyics world.
-				this.mPhysicsWorld = new PhysicsWorld(new Vector2(0,0),false);
-				
-				// Register the update handler.
-				this.mGameScene.registerUpdateHandler(this.mPhysicsWorld);
-				 
-				// Create the fixture definition - how the diver body will respond to impacts against other physics bodies.
-				final FixtureDef FISH_FIX = PhysicsFactory.createFixtureDef(0.0f,0.0f,0.0f);
-			
-				//Create for fish object physics.
-				mFishyBody = PhysicsFactory.createCircleBody(mPhysicsWorld, littleFishy, BodyType.DynamicBody, FISH_FIX);
-				mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(littleFishy, mFishyBody, true, false));
-
-	}
-	
-	public void setFishPhysics()
-	{
-		// Create a new phsyics world.
-				this.mPhysicsWorld = new PhysicsWorld(new Vector2(0,0),false);
-				
-				// Register the update handler.
-				this.mGameScene.registerUpdateHandler(this.mPhysicsWorld);
-				 
-				// Create the fixture definition - how the diver body will respond to impacts against other physics bodies.
-				final FixtureDef FISH_FIX = PhysicsFactory.createFixtureDef(0.0f,0.0f,0.0f);
-			
-				//Create for fish object physics.
-				mFishyBody = PhysicsFactory.createCircleBody(mPhysicsWorld, littleFishy, BodyType.DynamicBody, FISH_FIX);
-				mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(littleFishy, mFishyBody, true, false));
-
-	}
-	
-	
-	*/
+ * private BitmapTextureAtlas mTextureAtlasFish; private TiledTextureRegion
+ * mTextureRegionFish; private Fish littleFishy; private Body mFishyBody; //Fish
+ * Texture generator for onCreateResource. //this.mTextureAtlasFish = new
+ * BitmapTextureAtlas(this.getTextureManager(), 1300, 1390,
+ * TextureOptions.BILINEAR_PREMULTIPLYALPHA); //this.mTextureRegionFish =
+ * BitmapTextureAtlasTextureRegionFactory
+ * .createTiledFromAsset(this.mTextureAtlasFish, this, "fish.png", 0, 0, 2, 2);
+ * //this.mTextureAtlasFish.load(); public void drawFish(int location) { //
+ * Initialize a diver object. try { this.littleFishy = new Fish(CAMERA_WIDTH,
+ * location, this, mTextureAtlasFish, mTextureRegionFish); Log.i(TAG_FISH,
+ * "Fish object decleration: "); Log.i(TAG_FISH, "Init fish at: " + location);
+ * this.littleFishy.setSize(80, 80); } catch (IOException e) {
+ * e.printStackTrace(); } // Attach the fish to the scene.
+ * 
+ * this.mGameScene.attachChild(littleFishy); Log.i(TAG_FISH,
+ * "Attched enabled to Fish object... ");
+ * 
+ * setFishPhysics(); Log.i(TAG_FISH, "Physics set for Fish object... "); }
+ * 
+ * //Update on for fish object. public void updateFishScene() {
+ * mGameScene.registerUpdateHandler(new IUpdateHandler() {
+ * 
+ * @Override public void reset(){}
+ * 
+ * @Override public void onUpdate(final float pSecondsElpased) { deltaTime +=
+ * pSecondsElpased;
+ * 
+ * if(deltaTime > 5.0f && deltaTime < 10.f){
+ * 
+ * littleFishy.moveFishRight(mFishyBody);
+ * 
+ * }else if (deltaTime > 10.f){
+ * 
+ * littleFishy.moveFishLeft(mFishyBody);
+ * 
+ * }else{
+ * 
+ * littleFishy.moveFishLeft(mFishyBody); } } }); }
+ * 
+ * public void setFishPhysics() { // Create a new phsyics world.
+ * this.mPhysicsWorld = new PhysicsWorld(new Vector2(0,0),false);
+ * 
+ * // Register the update handler.
+ * this.mGameScene.registerUpdateHandler(this.mPhysicsWorld);
+ * 
+ * // Create the fixture definition - how the diver body will respond to impacts
+ * against other physics bodies. final FixtureDef FISH_FIX =
+ * PhysicsFactory.createFixtureDef(0.0f,0.0f,0.0f);
+ * 
+ * //Create for fish object physics. mFishyBody =
+ * PhysicsFactory.createCircleBody(mPhysicsWorld, littleFishy,
+ * BodyType.DynamicBody, FISH_FIX); mPhysicsWorld.registerPhysicsConnector(new
+ * PhysicsConnector(littleFishy, mFishyBody, true, false));
+ * 
+ * }
+ * 
+ * public void setFishPhysics() { // Create a new phsyics world.
+ * this.mPhysicsWorld = new PhysicsWorld(new Vector2(0,0),false);
+ * 
+ * // Register the update handler.
+ * this.mGameScene.registerUpdateHandler(this.mPhysicsWorld);
+ * 
+ * // Create the fixture definition - how the diver body will respond to impacts
+ * against other physics bodies. final FixtureDef FISH_FIX =
+ * PhysicsFactory.createFixtureDef(0.0f,0.0f,0.0f);
+ * 
+ * //Create for fish object physics. mFishyBody =
+ * PhysicsFactory.createCircleBody(mPhysicsWorld, littleFishy,
+ * BodyType.DynamicBody, FISH_FIX); mPhysicsWorld.registerPhysicsConnector(new
+ * PhysicsConnector(littleFishy, mFishyBody, true, false));
+ * 
+ * }
+ */
 
