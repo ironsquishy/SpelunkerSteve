@@ -1,9 +1,10 @@
 package com.games.spelunkersteve.gameplay;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Random;
 
+import org.andengine.engine.camera.Camera;
+import org.andengine.engine.handler.IUpdateHandler;
 import org.andengine.engine.options.EngineOptions;
 import org.andengine.engine.options.ScreenOrientation;
 import org.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
@@ -14,8 +15,11 @@ import org.andengine.entity.scene.Scene;
 import org.andengine.entity.scene.background.AutoParallaxBackground;
 import org.andengine.entity.scene.background.ParallaxBackground.ParallaxEntity;
 import org.andengine.entity.sprite.Sprite;
-import org.andengine.entity.sprite.TiledSprite;
 import org.andengine.entity.util.FPSLogger;
+import org.andengine.extension.physics.box2d.PhysicsConnector;
+import org.andengine.extension.physics.box2d.PhysicsFactory;
+import org.andengine.extension.physics.box2d.PhysicsWorld;
+import org.andengine.input.touch.TouchEvent;
 import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlasTextureRegionFactory;
@@ -24,14 +28,6 @@ import org.andengine.opengl.texture.region.TiledTextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
 import org.andengine.util.adt.color.Color;
-import org.andengine.engine.camera.Camera;
-import org.andengine.engine.handler.IUpdateHandler;
-import org.andengine.engine.handler.physics.PhysicsHandler;
-import org.andengine.engine.handler.timer.TimerHandler;
-import org.andengine.extension.physics.box2d.PhysicsConnector;
-import org.andengine.extension.physics.box2d.PhysicsFactory;
-import org.andengine.extension.physics.box2d.PhysicsWorld;
-import org.andengine.input.touch.TouchEvent;
 
 import android.hardware.SensorManager;
 import android.util.Log;
@@ -40,10 +36,9 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
-import com.games.spelunkersteve.characters.DrawableSprites;
-import com.games.spelunkersteve.characters.Fish;
 import com.games.spelunkersteve.characters.PlateTexture;
 import com.games.spelunkersteve.characters.ScubaDiver;
+import com.games.spelunkersteve.mechanics.Lattice;
 
 
 
@@ -103,6 +98,11 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 	private static Line hitMeTop;
 	private static Line hitMeBottom;
 	private static Line DiverRightBorder;
+	
+	// Cave tiles
+	private static Rectangle[] tiles;
+	private static int[][] binaryLattice;
+	private static int[][][] locationLattice;
 
 	// Camera camera;
 
@@ -189,6 +189,11 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 						SCUBA_DIVER_SHEET_ROWS);
 
 		this.mTextureAtlasScubaDiver.load();
+		
+		Lattice lattice = new Lattice(CAMERA_HEIGHT / 80, CAMERA_WIDTH / 80);
+		lattice.generateLattice();
+		binaryLattice = lattice.getBinaryLattice();
+		locationLattice = lattice.getLocationLattice(CAMERA_HEIGHT, CAMERA_WIDTH);
 		
 		Log.i("LOADGFX", "Load Complete...");
 	}
@@ -398,6 +403,24 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 		this.mGameScene.attachChild(bottom_border);
 		this.mGameScene.attachChild(right_border);
 	}
+	
+	// Draws tiles for continuous cave
+		public void drawCaveTiles() {
+			tiles = new Rectangle[locationLattice.length
+					* locationLattice[0].length];
+			for (int i = 0; i < locationLattice.length; i++) {
+				for (int j = 0; j < locationLattice[0].length; j++) {
+					if (binaryLattice[i][j] == 1) {
+						Rectangle rect = new Rectangle(
+								locationLattice[i][j][1] + 40,
+								locationLattice[i][j][0] + 40, 80, 80,
+								this.getVertexBufferObjectManager());
+						rect.setColor(Color.RED);
+						mGameScene.attachChild(rect);
+					}
+				}
+			}
+		}
 
 	/**
 	 * @author Allen Space, Sebastian Babb
