@@ -26,7 +26,6 @@ import org.andengine.ui.activity.SimpleBaseGameActivity;
 import org.andengine.util.adt.color.Color;
 import org.andengine.engine.camera.Camera;
 import org.andengine.engine.handler.IUpdateHandler;
-import org.andengine.engine.handler.physics.PhysicsHandler;
 import org.andengine.engine.handler.timer.TimerHandler;
 import org.andengine.extension.physics.box2d.PhysicsConnector;
 import org.andengine.extension.physics.box2d.PhysicsFactory;
@@ -309,7 +308,6 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 		
 		this.plates = new PlateTexture(x, y, width, height, mTextureRegionPlates, this.getVertexBufferObjectManager());
 		
-		
 		FixtureDef WALL_FIX = PhysicsFactory.createFixtureDef(1.0f, 0.0f, 0.5f);
 
 		plateBody = PhysicsFactory.createBoxBody(mPhysicsWorld, plates,
@@ -320,8 +318,6 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 
 		plates.move(plateBody);
 		
-		
-		//final PhysicsHandler phPlate = new PhysicsHanlder()
 		
 		this.mGameScene.attachChild(this.plates);
 

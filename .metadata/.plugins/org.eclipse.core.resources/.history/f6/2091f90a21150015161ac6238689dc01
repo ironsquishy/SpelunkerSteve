@@ -38,22 +38,13 @@ public class ScubaDiver extends AnimatedSprite {
 		body.setLinearVelocity(new Vector2(0, -5.0f));
 	}
 	
-	/**
-	 * @author Christopher Washington
-	 * Description: Slows down Divers object further towards the edge of the screen.
-	 * @param body Body object for physics handler.
-	 * */
+	//Chris
 	public void slowDiver(Body body)
 	{
 		this.mBody = body;
 		body.setLinearVelocity(new Vector2(-1.0f, body.getLinearVelocity().y));
 	}
-	
-	/**
-	 * @author Christopher Washington
-	 * Description: Resets Steves speed on screen.
-	 * @param body Body object that is need for physics handler.
-	 * */
+	//Chris
 	public void setConstantSpeed(Body body)
 	{
 		this.mBody = body;
