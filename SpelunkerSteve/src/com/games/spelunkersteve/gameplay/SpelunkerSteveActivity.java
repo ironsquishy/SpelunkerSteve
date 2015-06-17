@@ -50,6 +50,9 @@ import com.games.spelunkersteve.characters.ScubaDiver;
 public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 		IOnSceneTouchListener {
 
+			//New data members just for shit and giggles...
+			long double Deeee = 32;
+			
 	/** Camera **/
 	private static final int CAMERA_WIDTH = 640;
 	private static final int CAMERA_HEIGHT = 480;
