@@ -112,12 +112,16 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 	@Override
 	public EngineOptions onCreateEngineOptions() {
 		// Create a new camera object for the scene.
+		
 		Camera camera = new Camera(0, 0, CAMERA_WIDTH, CAMERA_HEIGHT);
+		
+		
 		// Return an engine object - full screen,fixed landscape, scaling
 		// scheme, width and height of scene.
 		EngineOptions engineOptions = new EngineOptions(true,
 				ScreenOrientation.LANDSCAPE_FIXED, new RatioResolutionPolicy(
 						CAMERA_WIDTH, CAMERA_HEIGHT), camera);
+		
 		// Set dithering to remove horizontal lines.
 		engineOptions.getRenderOptions().setDithering(true);
 
@@ -145,7 +149,6 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 				this.getTextureManager(), 1024, 1024, TextureOptions.DEFAULT);
 
 		/** Set Background **/
-		Log.i("IMAGES", "Get background image....");
 		this.mAutoParallaxLayerBack = BitmapTextureAtlasTextureRegionFactory
 				.createFromAsset(this.mTextureAtlasAutoParallax,
 						this.getAssets(), "underwater.png", 0, 188);
@@ -185,6 +188,8 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 						SCUBA_DIVER_SHEET_ROWS);
 
 		this.mTextureAtlasScubaDiver.load();
+		
+		Log.i("LOADGFX", "Load Complete...");
 	}
 	
 	/**
@@ -212,12 +217,14 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 
 		// draw sprites.
 		drawDiver();
-		
+		setPhysics();
 
 		// Set simple collisions.
 		drawBorderLine();
+		
 		sceneUpdateHandle();
-
+		
+		Log.i("SCENE", "Load Scene complete....");
 		return mGameScene;
 	}
 
@@ -250,6 +257,7 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 		// Create a parallax background object.
 		final AutoParallaxBackground autoParallaxBackground = new AutoParallaxBackground(
 				0, 0, 0, 5);
+		
 		final VertexBufferObjectManager vertexBufferObjectManager = this
 				.getVertexBufferObjectManager();
 
@@ -258,19 +266,25 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 				this.mAutoParallaxLayerBack.getHeight()
 						- this.mAutoParallaxLayerMid.getHeight() / 2,
 				this.mAutoParallaxLayerMid, vertexBufferObjectManager);
+		
 		mCaveFloor = new Sprite(this.mAutoParallaxLayerFront.getWidth() / 8,
 				this.mAutoParallaxLayerFront.getHeight() / 8,
 				this.mAutoParallaxLayerFront, vertexBufferObjectManager);
 
-		// Assemble the parallax background.
+		/**Assemble Parallax background*/
+		
+		//Attach Cave ceiling to Parallax.
 		mParallaxEntity = new ParallaxEntity(-10.0f, this.mCaveCeiling);
 		autoParallaxBackground
 				.attachParallaxEntity(new ParallaxEntity(0.0f, new Sprite(
 						this.mAutoParallaxLayerBack.getWidth() / 2,
 						this.mAutoParallaxLayerBack.getHeight() / 2,
 						this.mAutoParallaxLayerBack, vertexBufferObjectManager)));
+		
+		//Attach CaveFloor to as Parallax
 		autoParallaxBackground.attachParallaxEntity(new ParallaxEntity(-5.0f,
 				this.mCaveFloor));
+		
 		autoParallaxBackground.attachParallaxEntity(mParallaxEntity);
 
 		// Set the background.
@@ -292,13 +306,9 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 		float width = 32;
 		float height = 32;
 		
-		Log.i("TexturePlate", "pre Call for Plate class...");
-		
 		this.plates = new PlateTexture(x, y, width, height, mTextureRegionPlates, this.getVertexBufferObjectManager());
 		
-		Log.i("TexturePlate", "Post Call for Plate class...");
-		
-		FixtureDef WALL_FIX = PhysicsFactory.createFixtureDef(0.0f, 0.0f, 0.0f);
+		FixtureDef WALL_FIX = PhysicsFactory.createFixtureDef(1.0f, 0.0f, 0.5f);
 
 		plateBody = PhysicsFactory.createBoxBody(mPhysicsWorld, plates,
 				BodyType.KinematicBody, WALL_FIX);
@@ -306,9 +316,6 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 		mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(
 				plates, plateBody, true, false));
 
-		
-		Log.i("TexturePlate", "Pre call for plate.move().....");
-		
 		plates.move(plateBody);
 		
 		
@@ -327,7 +334,7 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 			this.mScubaDiver = new ScubaDiver(CAMERA_CENTER_X / 4,
 					CAMERA_CENTER_Y, this, mTextureAtlasScubaDiver,
 					mTextureRegionScubaDiver);
-			this.mScubaDiver.setSize(100, 80);
+			this.mScubaDiver.setSize(64,64);
 			this.mScubaDiver.animate(150);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -335,7 +342,7 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 		// Attach the diver to the scene.
 		this.mGameScene.attachChild(this.mScubaDiver);
 
-		setPhysics();
+		
 	}
 
 	/**
@@ -404,10 +411,9 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 
 		// Create the fixture definition - how the diver body will respond to
 		// impacts against other physics bodies.
-		final FixtureDef SCUBA_FIX = PhysicsFactory.createFixtureDef(0.0f,
-				0.0f, 0.0f);
+		final FixtureDef SCUBA_FIX = PhysicsFactory.createFixtureDef(0.5f,
+				0.0f, 0.5f);
 
-		// create plate texture physics..
 
 		// Create the diver's physics body - dynamic.
 		mDiverBody = PhysicsFactory.createCircleBody(mPhysicsWorld,
@@ -416,7 +422,7 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 				mScubaDiver, mDiverBody, true, false));
 
 	}
-
+	
 	/**
 	 * @author Allen Space, Sebastian Babb
 	 * @brief Handles updates on each frame.
@@ -432,9 +438,17 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 				
 				deltaTime += pSecondsElpased;
 				
-				if(deltaTime %2 > 0 && deltaTime%2 < 0.025)
+				if(deltaTime %2 > 0 && deltaTime%2 < 0.010)
 				{
 					setForeground();
+				}
+				if (plates != null) {
+					if(mScubaDiver.collidesWith(plates))
+					{
+						mScubaDiver.slowDiver(mDiverBody);
+					}else{
+						mScubaDiver.setConstantSpeed(mDiverBody);
+					}
 				}
 				
 				if (mScubaDiver.collidesWith(hitMeTop)) {
@@ -450,11 +464,13 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 
 				if (mScubaDiver.collidesWith(DiverRightBorder)) {
 					DiverRightBorder.setColor(Color.RED);
+					mScubaDiver.slowDiver(mDiverBody);
 				} else {
 					DiverRightBorder.setColor(Color.GREEN);
+					mScubaDiver.setConstantSpeed(mDiverBody);
 				}
 			}
-		});
+		}); 
 
 	}
 
