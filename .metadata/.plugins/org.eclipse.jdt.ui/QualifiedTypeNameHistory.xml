@@ -4,4 +4,5 @@
 <fullyQualifiedTypeName name="org.andengine.entity.primitive.Rectangle"/>
 <fullyQualifiedTypeName name="com.games.spelunkersteve.characters.PlateTexture"/>
 <fullyQualifiedTypeName name="org.andengine.engine.camera.Camera"/>
+<fullyQualifiedTypeName name="org.andengine.engine.handler.physics.PhysicsHandler"/>
 </qualifiedTypeNameHistroy>

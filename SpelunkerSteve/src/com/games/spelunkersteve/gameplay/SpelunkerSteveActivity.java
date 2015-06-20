@@ -220,10 +220,12 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 		// draw sprites.
 		drawDiver();
 		setPhysics();
-
+		
+		setForeground();
 		// Set simple collisions.
+		
 		drawBorderLine();
-		drawCaveTiles();
+		
 		sceneUpdateHandle();
 
 		Log.i("SCENE", "Load Scene complete....");
@@ -300,30 +302,8 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 	 * 
 	 * */
 	private void setForeground() {
-
-		float x = 620;
-		// Offset random interval between (50-480).
-		float y = randNum.nextInt(431) + 50;
-		float width = 32;
-		float height = 32;
-
-		this.plates = new Plate(x, y, width, height,
-				mTextureRegionPlates, this.getVertexBufferObjectManager());
-
-		FixtureDef WALL_FIX = PhysicsFactory.createFixtureDef(1.0f, 0.0f, 0.5f);
-
-		plateBody = PhysicsFactory.createBoxBody(mPhysicsWorld, plates,
-				BodyType.KinematicBody, WALL_FIX);
-
-		mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(plates,
-				plateBody, true, false));
-
-		plates.move(plateBody);
-
-		// final PhysicsHandler phPlate = new PhysicsHanlder()
-
-		this.mGameScene.attachChild(this.plates);
-
+		
+		drawCaveTiles();
 	}
 
 	/**
@@ -399,15 +379,25 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 
 	// Draws tiles for continuous cave
 	public void drawCaveTiles() {
+		
+		Lattice lattice = new Lattice(CAMERA_HEIGHT / 80, CAMERA_WIDTH / 80);
+		lattice.generateLattice();
+		binaryLattice = lattice.getBinaryLattice();
+		locationLattice = lattice.getLocationLattice(CAMERA_HEIGHT,
+				CAMERA_WIDTH);
+		
 		tiles = new Plate[locationLattice.length][locationLattice[0].length];
 		for (int i = 0; i < locationLattice.length; i++) {
 			for (int j = 0; j < locationLattice[0].length; j++) {
 				if (binaryLattice[i][j] == 1) {
 					tiles[i][j] = new Plate(
-							locationLattice[i][j][1] + 40,
-							locationLattice[i][j][0] + 40, 80, 80,
+							locationLattice[i][j][1] + 32,
+							locationLattice[i][j][0] + 32, 64, 64,
 							mTextureRegionPlates,
 							this.getVertexBufferObjectManager());
+					
+					setPlatePhysics(tiles[i][j], plateBody);
+					
 					mGameScene.attachChild(tiles[i][j]);
 				}
 			}
@@ -440,6 +430,26 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 				mScubaDiver, mDiverBody, true, false));
 
 	}
+	
+	/**
+	 * @author Allen Space
+	 * @param mPlate The Specific tile to connect with physics handler.
+	 * @param mPlateBody The Body type for physics handler to give rigid body.
+	 * Description: This will connect individual plates to physics handler.
+	 * 				ScubeDiver will interact with these rigidbody.
+	 * */
+	public void setPlatePhysics(Plate pPlate, Body pPlateBody)
+	{
+		FixtureDef WALL_FIX = PhysicsFactory.createFixtureDef(1.0f, 0.0f, 0.5f);
+
+		pPlateBody = PhysicsFactory.createBoxBody(mPhysicsWorld, pPlate,
+				BodyType.KinematicBody, WALL_FIX);
+
+		mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(pPlate,
+				pPlateBody, true, false));
+
+		pPlate.move(pPlateBody);
+	}
 
 	/**
 	 * @author Allen Space, Sebastian Babb
@@ -453,26 +463,12 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 
 			@Override
 			public void onUpdate(final float pSecondsElpased) {
-
-				deltaTime += pSecondsElpased;
-
-				if (deltaTime % 2 > 0 && deltaTime % 2 < 0.010) {
-					setForeground();
-				}
-				if (plates != null) {
-					if (mScubaDiver.collidesWith(plates)) {
-						mScubaDiver.slowDiver(mDiverBody);
-					} else {
-						mScubaDiver.setConstantSpeed(mDiverBody);
-					}
-				}
 				
-				for (int i = 0; i < tiles.length; i++) {
-					for (int j = 0; j < tiles[0].length; j++) {
-						if (mScubaDiver.collidesWith(tiles[i][j])) {
-							mScubaDiver.slowDiver(mDiverBody);
-						}
-					}
+				deltaTime += pSecondsElpased;
+				
+				if(deltaTime % 10 > 0 && deltaTime % 10 < 0.05)
+				{
+					drawCaveTiles();
 				}
 
 				if (mScubaDiver.collidesWith(hitMeTop)) {

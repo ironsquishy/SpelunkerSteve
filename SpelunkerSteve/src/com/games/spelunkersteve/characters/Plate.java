@@ -57,13 +57,10 @@ public class Plate extends TiledSprite {
 	 * */
 	public void move(Body body) {
 		
-		Log.i("TexturePlate", "Inside Call for move().....");
-		
 		this.mBody = body;
 		
-		body.setLinearVelocity(new Vector2(-2.0f, 0));
+		body.setLinearVelocity(new Vector2(-1.0f, 0));
 		
-		Log.i("TexturePlate", "Set Movement.....");
 	}
 			
 }
