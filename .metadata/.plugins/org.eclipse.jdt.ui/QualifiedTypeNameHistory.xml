@@ -5,4 +5,8 @@
 <fullyQualifiedTypeName name="com.games.spelunkersteve.characters.PlateTexture"/>
 <fullyQualifiedTypeName name="org.andengine.engine.camera.Camera"/>
 <fullyQualifiedTypeName name="org.andengine.engine.handler.physics.PhysicsHandler"/>
+<fullyQualifiedTypeName name="com.badlogic.gdx.physics.box2d.Body"/>
+<fullyQualifiedTypeName name="com.games.spelunkersteve.mechanics.PhysicsBody"/>
+<fullyQualifiedTypeName name="android.util.Log"/>
+<fullyQualifiedTypeName name="org.andengine.util.adt.color.Color"/>
 </qualifiedTypeNameHistroy>

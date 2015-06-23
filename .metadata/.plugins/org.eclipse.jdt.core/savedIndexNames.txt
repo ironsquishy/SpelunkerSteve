@@ -5,4 +5,3 @@ INDEX VERSION 1.127+C:\Users\core6_000\Documents\Github\SpelunkerSteve\.metadata
 691947513.index
 4077560374.index
 1830124947.index
-276128807.index

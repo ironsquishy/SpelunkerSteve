@@ -1,2 +1,5 @@
+TerminalPrefInvertColors=true
+description.autobuilding=false
 eclipse.preferences.version=1
+overriddenByCSS=,TerminalPrefInvertColors,
 version=1

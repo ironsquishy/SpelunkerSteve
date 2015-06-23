@@ -38,6 +38,7 @@ import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.games.spelunkersteve.characters.Plate;
 import com.games.spelunkersteve.characters.ScubaDiver;
 import com.games.spelunkersteve.mechanics.Lattice;
+import com.games.spelunkersteve.mechanics.PhysicsBody;
 
 public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 		IOnSceneTouchListener {
@@ -47,6 +48,9 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 	private static final int CAMERA_HEIGHT = 480;
 	private static final int CAMERA_CENTER_X = CAMERA_WIDTH / 2;
 	private static final int CAMERA_CENTER_Y = CAMERA_HEIGHT / 2;
+	
+	private static final FixtureDef WALL_FIX = PhysicsFactory.createFixtureDef(1.0f, 0.0f, 0.5f);
+	private static final FixtureDef SCUBA_FIX = PhysicsFactory.createFixtureDef(0.5f, 0.0f, 0.5f);
 
 	private static float deltaTime;
 
@@ -90,6 +94,7 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 
 	// Physics.
 	private PhysicsWorld mPhysicsWorld;
+	private PhysicsBody mPhysicSet;
 
 	// Top and bottom borders.
 	private static Line hitMeTop;
@@ -186,11 +191,13 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 
 		this.mTextureAtlasScubaDiver.load();
 
-		Lattice lattice = new Lattice(CAMERA_HEIGHT / 80, CAMERA_WIDTH / 80);
+		/*Lattice lattice = new Lattice(CAMERA_HEIGHT / 80, CAMERA_WIDTH / 80);
 		lattice.generateLattice();
 		binaryLattice = lattice.getBinaryLattice();
 		locationLattice = lattice.getLocationLattice(CAMERA_HEIGHT,
-				CAMERA_WIDTH);
+				CAMERA_WIDTH);*/
+		
+		mPhysicSet = new PhysicsBody();
 
 		Log.i("LOADGFX", "Load Complete...");
 	}
@@ -215,16 +222,20 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 		randNum = new Random();
 
 		// Build the scene.
+		setWorldPhysics();
+		
 		setBackground();
-
-		// draw sprites.
-		drawDiver();
-		setPhysics();
 		
 		setForeground();
+		drawBorderLine();
+		// draw sprites.
+		drawDiver();
+		
+		
+		
 		// Set simple collisions.
 		
-		drawBorderLine();
+		
 		
 		sceneUpdateHandle();
 
@@ -293,6 +304,8 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 
 		// Set the background.
 		this.mGameScene.setBackground(autoParallaxBackground);
+		
+		Log.i("SCENE", "Draw background complete.");
 	}
 
 	/**
@@ -304,6 +317,8 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 	private void setForeground() {
 		
 		drawCaveTiles();
+		
+		Log.i("SCENE", "Draw foreground complete.");
 	}
 
 	/**
@@ -322,9 +337,14 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		// Attach the diver to the scene.
+		// Attach the diver to the scene
+		
+		mDiverBody = mPhysicSet.physicsDiver(mScubaDiver, mPhysicsWorld);
+		
 		this.mGameScene.attachChild(this.mScubaDiver);
-
+		
+		
+		Log.i("SCENE", "Draw diver completed.");
 	}
 
 	/**
@@ -347,34 +367,18 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 
 		DiverRightBorder.setColor(Color.GREEN);
 
-		hitMeTop.setColor(Color.WHITE);
-		hitMeBottom.setColor(Color.WHITE);
+		hitMeTop.setColor(Color.GREEN);
+		hitMeBottom.setColor(Color.GREEN);
 
 		mGameScene.attachChild(hitMeTop);
 		mGameScene.attachChild(hitMeBottom);
-
 		mGameScene.attachChild(DiverRightBorder);
-
-		FixtureDef WALL_FIX = PhysicsFactory.createFixtureDef(0.0f, 0.0f, 0.0f);
-
-		Line top_border = new Line(0, CAMERA_HEIGHT, CAMERA_WIDTH,
-				CAMERA_HEIGHT + 1, 1, this.getVertexBufferObjectManager()); // Top
-																			// bounds
-
-		Line bottom_border = new Line(0, 0, CAMERA_WIDTH, 0, 0,
-				this.getVertexBufferObjectManager()); // Bottom Bounds
-
-		Line right_border = new Line(140, CAMERA_HEIGHT, 140, 0, 0,
-				this.getVertexBufferObjectManager());
-
-		PhysicsFactory.createLineBody(mPhysicsWorld, top_border, WALL_FIX);
-		PhysicsFactory.createLineBody(mPhysicsWorld, bottom_border, WALL_FIX);
-		PhysicsFactory.createLineBody(mPhysicsWorld, right_border, WALL_FIX);
-
-		// Attaches to scene.
-		this.mGameScene.attachChild(top_border);
-		this.mGameScene.attachChild(bottom_border);
-		this.mGameScene.attachChild(right_border);
+		
+		PhysicsFactory.createLineBody(mPhysicsWorld, hitMeTop, WALL_FIX);
+		PhysicsFactory.createLineBody(mPhysicsWorld, hitMeBottom, WALL_FIX);
+		PhysicsFactory.createLineBody(mPhysicsWorld, DiverRightBorder, WALL_FIX);
+		
+		Log.i("SCENE", "Draw borderline complete.");
 	}
 
 	// Draws tiles for continuous cave
@@ -396,12 +400,14 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 							mTextureRegionPlates,
 							this.getVertexBufferObjectManager());
 					
-					setPlatePhysics(tiles[i][j], plateBody);
+				plateBody =	mPhysicSet.physicsTiles(tiles[i][j], mPhysicsWorld);
 					
 					mGameScene.attachChild(tiles[i][j]);
 				}
 			}
 		}
+		
+		Log.i("SCENE", "DrawCave tiles complete.");
 	}
 
 	/**
@@ -409,7 +415,7 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 	 * @brief Setting world physics and divers physics. In future must need
 	 *        diveded so diver physics is set in different method.
 	 * */
-	private void setPhysics() {
+	private void setWorldPhysics() {
 
 		// Create a new phsyics world.
 		this.mPhysicsWorld = new PhysicsWorld(new Vector2(0,
@@ -417,39 +423,12 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 
 		// Register the update handler.
 		this.mGameScene.registerUpdateHandler(this.mPhysicsWorld);
-
-		// Create the fixture definition - how the diver body will respond to
-		// impacts against other physics bodies.
-		final FixtureDef SCUBA_FIX = PhysicsFactory.createFixtureDef(0.5f,
-				0.0f, 0.5f);
-
-		// Create the diver's physics body - dynamic.
-		mDiverBody = PhysicsFactory.createCircleBody(mPhysicsWorld,
-				mScubaDiver, BodyType.DynamicBody, SCUBA_FIX);
-		mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(
-				mScubaDiver, mDiverBody, true, false));
+		
+		Log.i("SCENE", "Set physics world complete.");
 
 	}
 	
-	/**
-	 * @author Allen Space
-	 * @param mPlate The Specific tile to connect with physics handler.
-	 * @param mPlateBody The Body type for physics handler to give rigid body.
-	 * Description: This will connect individual plates to physics handler.
-	 * 				ScubeDiver will interact with these rigidbody.
-	 * */
-	public void setPlatePhysics(Plate pPlate, Body pPlateBody)
-	{
-		FixtureDef WALL_FIX = PhysicsFactory.createFixtureDef(1.0f, 0.0f, 0.5f);
-
-		pPlateBody = PhysicsFactory.createBoxBody(mPhysicsWorld, pPlate,
-				BodyType.KinematicBody, WALL_FIX);
-
-		mPhysicsWorld.registerPhysicsConnector(new PhysicsConnector(pPlate,
-				pPlateBody, true, false));
-
-		pPlate.move(pPlateBody);
-	}
+	
 
 	/**
 	 * @author Allen Space, Sebastian Babb
@@ -464,24 +443,21 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 			@Override
 			public void onUpdate(final float pSecondsElpased) {
 				
-				deltaTime += pSecondsElpased;
 				
-				if(deltaTime % 10 > 0 && deltaTime % 10 < 0.05)
-				{
-					drawCaveTiles();
-				}
-
 				if (mScubaDiver.collidesWith(hitMeTop)) {
 					hitMeTop.setColor(Color.RED);
 					mScubaDiver.slowDiver(mDiverBody);
 				} else {
-					hitMeTop.setColor(Color.YELLOW);
+					hitMeTop.setColor(Color.GREEN);
+					mScubaDiver.setConstantSpeed(mDiverBody);
 				}
 				if (mScubaDiver.collidesWith(hitMeBottom)) {
+					mScubaDiver.slowDiver(mDiverBody);
 					hitMeBottom.setColor(Color.RED);
 				} else {
-					hitMeBottom.setColor(Color.YELLOW);
-					mScubaDiver.slowDiver(mDiverBody);
+					mScubaDiver.setConstantSpeed(mDiverBody);
+					hitMeBottom.setColor(Color.GREEN);
+			
 				}
 
 				if (mScubaDiver.collidesWith(DiverRightBorder)) {
