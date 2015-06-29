@@ -3,6 +3,7 @@ package com.games.spelunkersteve.gameplay;
 import java.io.IOException;
 import java.util.Random;
 
+import org.andengine.engine.Engine;
 import org.andengine.engine.camera.Camera;
 import org.andengine.engine.handler.IUpdateHandler;
 import org.andengine.engine.options.EngineOptions;
@@ -28,6 +29,10 @@ import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
 import org.andengine.util.adt.color.Color;
 
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
 import android.hardware.SensorManager;
 import android.util.Log;
 
@@ -37,8 +42,7 @@ import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.games.spelunkersteve.characters.Plate;
 import com.games.spelunkersteve.characters.ScubaDiver;
-import com.games.spelunkersteve.mechanics.Lattice;
-import com.games.spelunkersteve.mechanics.PhysicsBody;
+import com.games.spelunkersteve.mechanics.*;
 
 public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 		IOnSceneTouchListener {
@@ -51,36 +55,16 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 	
 	private static final FixtureDef WALL_FIX = PhysicsFactory.createFixtureDef(1.0f, 0.0f, 0.5f);
 	private static final FixtureDef SCUBA_FIX = PhysicsFactory.createFixtureDef(0.5f, 0.0f, 0.5f);
-
-	private static float deltaTime;
-
-	private static Random randNum;
-
-	/** Sprite sheets **/
-	private static final int SCUBA_DIVER_SHEET_COLS = 2;
-	private static final int SCUBA_DIVER_SHEET_ROWS = 2;
-	private static final int TILE_TEXTURE_COLS = 3;
-	private static final int TILE_TEXTURE_ROWS = 2;
-
-	/** Scenes **/
-	// private Scene mSplashScene;
+	
 	private Scene mGameScene;
-
-	private BitmapTextureAtlas mTextureAtlasScubaDiver;
-	private BitmapTextureAtlas mTextureAtlasAutoParallax;
-	private BitmapTextureAtlas mTextureAtlasPlates;
-
-	private ITextureRegion mAutoParallaxLayerBack;
-	private ITextureRegion mAutoParallaxLayerMid;
-	private ITextureRegion mAutoParallaxLayerFront;
-
+	
+	private Camera mCamera;
+	
+	private static ResourceManager mResourceManager;
+	
 	// Parallax background.
 	private ParallaxEntity mParallaxEntity;
 	private Sprite mCaveCeiling, mCaveFloor;
-
-	// Tiled textture regions for animated objects.
-	private TiledTextureRegion mTextureRegionScubaDiver;
-	private TiledTextureRegion mTextureRegionPlates;
 
 	// Other Sprites.
 	private Plate plates;
@@ -106,7 +90,7 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 	private static int[][] binaryLattice;
 	private static int[][][] locationLattice;
 
-	// Camera camera;
+	
 
 	/*************************************************
 	 ************** Inherited methods ****************
@@ -114,15 +98,14 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 
 	@Override
 	public EngineOptions onCreateEngineOptions() {
-		// Create a new camera object for the scene.
 
-		Camera camera = new Camera(0, 0, CAMERA_WIDTH, CAMERA_HEIGHT);
+		mCamera = new Camera(0, 0, CAMERA_WIDTH, CAMERA_HEIGHT);
 
 		// Return an engine object - full screen,fixed landscape, scaling
 		// scheme, width and height of scene.
 		EngineOptions engineOptions = new EngineOptions(true,
 				ScreenOrientation.LANDSCAPE_FIXED, new RatioResolutionPolicy(
-						CAMERA_WIDTH, CAMERA_HEIGHT), camera);
+						CAMERA_WIDTH, CAMERA_HEIGHT), mCamera);
 
 		// Set dithering to remove horizontal lines.
 		engineOptions.getRenderOptions().setDithering(true);
@@ -132,74 +115,19 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 
 	@Override
 	protected void onCreateResources() throws IOException {
-
-		loadGFx();
-	}
-
-	/**
-	 * @author Allen Space, Sebastian Babb
-	 * @brief The method was design for code readability.
-	 * */
-	private void loadGFx() {
-		// TODO Auto-generated method stub
-
-		/** Set Base directory **/
-		BitmapTextureAtlasTextureRegionFactory.setAssetBasePath("gfx/");
-
-		/** Background **/
-		this.mTextureAtlasAutoParallax = new BitmapTextureAtlas(
-				this.getTextureManager(), 1024, 1024, TextureOptions.DEFAULT);
-
-		/** Set Background **/
-		this.mAutoParallaxLayerBack = BitmapTextureAtlasTextureRegionFactory
-				.createFromAsset(this.mTextureAtlasAutoParallax,
-						this.getAssets(), "underwater.png", 0, 188);
-
-		this.mAutoParallaxLayerMid = BitmapTextureAtlasTextureRegionFactory
-				.createFromAsset(this.mTextureAtlasAutoParallax, this,
-						"temp_ceiling.png", 0, 669);
-
-		this.mAutoParallaxLayerFront = BitmapTextureAtlasTextureRegionFactory
-				.createTiledFromAsset(this.mTextureAtlasAutoParallax, this,
-						"plates.png", 0, 0, TILE_TEXTURE_COLS,
-						TILE_TEXTURE_ROWS);
-
-		this.mTextureAtlasAutoParallax.load();
-
-		// Setting up foreground...
-		this.mTextureAtlasPlates = new BitmapTextureAtlas(
-				this.getTextureManager(), 256, 128,
-				TextureOptions.BILINEAR_PREMULTIPLYALPHA);
-
-		this.mTextureRegionPlates = BitmapTextureAtlasTextureRegionFactory
-				.createTiledFromAsset(this.mTextureAtlasPlates, this,
-						"plates.png", 0, 0, TILE_TEXTURE_COLS,
-						TILE_TEXTURE_ROWS);
-
-		this.mTextureAtlasPlates.load();
-
-		// Diver assets.
-		this.mTextureAtlasScubaDiver = new BitmapTextureAtlas(
-				this.getTextureManager(), 2048, 1024,
-				TextureOptions.BILINEAR_PREMULTIPLYALPHA);
-
-		// Diver texture region load.
-		this.mTextureRegionScubaDiver = BitmapTextureAtlasTextureRegionFactory
-				.createTiledFromAsset(this.mTextureAtlasScubaDiver, this,
-						"scuba_diver_boy.png", 0, 0, SCUBA_DIVER_SHEET_COLS,
-						SCUBA_DIVER_SHEET_ROWS);
-
-		this.mTextureAtlasScubaDiver.load();
-
-		/*Lattice lattice = new Lattice(CAMERA_HEIGHT / 80, CAMERA_WIDTH / 80);
+		
+		ResourceManager.getInstance().loadGameTextures(mEngine, this);
+		
+		
+		Lattice lattice = new Lattice(CAMERA_HEIGHT / 80, CAMERA_WIDTH / 80);
 		lattice.generateLattice();
 		binaryLattice = lattice.getBinaryLattice();
-		locationLattice = lattice.getLocationLattice(CAMERA_HEIGHT,
-				CAMERA_WIDTH);*/
+		locationLattice = lattice.getLocationLattice(CAMERA_HEIGHT, CAMERA_WIDTH);
 		
 		mPhysicSet = new PhysicsBody();
-
-		Log.i("LOADGFX", "Load Complete...");
+		
+		
+		Log.i("SCENE", "Load resources success.");
 	}
 
 	/**
@@ -215,31 +143,23 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 
 		// Scene
 		this.mGameScene = new Scene();
-
-		// Set the screen touch listener.
-		mGameScene.setOnSceneTouchListener(this);
-
-		randNum = new Random();
-
-		// Build the scene.
-		setWorldPhysics();
 		
 		setBackground();
 		
-		setForeground();
-		drawBorderLine();
-		// draw sprites.
-		drawDiver();
+		mGameScene.setOnSceneTouchListener(this);
+
+		this.setWorldPhysics();
 		
+		this.setForeground();
 		
+		this.drawBorderLine();
 		
-		// Set simple collisions.
+		this.drawDiver();
 		
-		
-		
-		sceneUpdateHandle();
+		this.sceneUpdateHandle();
 
 		Log.i("SCENE", "Load Scene complete....");
+		
 		return mGameScene;
 	}
 
@@ -255,7 +175,6 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 			mScubaDiver.dive(mDiverBody);
 
 		}
-
 		return false;
 	}
 
@@ -275,34 +194,12 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 
 		final VertexBufferObjectManager vertexBufferObjectManager = this
 				.getVertexBufferObjectManager();
+		
+		autoParallaxBackground.attachParallaxEntity(new ParallaxEntity(0.0f, new Sprite(
+						ResourceManager.mAutoParallaxLayerBack.getWidth() / 2,
+						ResourceManager.mAutoParallaxLayerBack.getHeight() / 2,
+						ResourceManager.mAutoParallaxLayerBack, vertexBufferObjectManager)));			
 
-		// Initialize the sprite members that will have collision detection.
-		mCaveCeiling = new Sprite(this.mAutoParallaxLayerMid.getWidth() / 2,
-				this.mAutoParallaxLayerBack.getHeight()
-						- this.mAutoParallaxLayerMid.getHeight() / 2,
-				this.mAutoParallaxLayerMid, vertexBufferObjectManager);
-
-		mCaveFloor = new Sprite(this.mAutoParallaxLayerFront.getWidth() / 8,
-				this.mAutoParallaxLayerFront.getHeight() / 8,
-				this.mAutoParallaxLayerFront, vertexBufferObjectManager);
-
-		/** Assemble Parallax background */
-
-		// Attach Cave ceiling to Parallax.
-		mParallaxEntity = new ParallaxEntity(-10.0f, this.mCaveCeiling);
-		autoParallaxBackground
-				.attachParallaxEntity(new ParallaxEntity(0.0f, new Sprite(
-						this.mAutoParallaxLayerBack.getWidth() / 2,
-						this.mAutoParallaxLayerBack.getHeight() / 2,
-						this.mAutoParallaxLayerBack, vertexBufferObjectManager)));
-
-		// Attach CaveFloor to as Parallax
-		autoParallaxBackground.attachParallaxEntity(new ParallaxEntity(-5.0f,
-				this.mCaveFloor));
-
-		autoParallaxBackground.attachParallaxEntity(mParallaxEntity);
-
-		// Set the background.
 		this.mGameScene.setBackground(autoParallaxBackground);
 		
 		Log.i("SCENE", "Draw background complete.");
@@ -329,9 +226,7 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 	private void drawDiver() {
 		// Initialize a diver object.
 		try {
-			this.mScubaDiver = new ScubaDiver(CAMERA_CENTER_X / 4,
-					CAMERA_CENTER_Y, this, mTextureAtlasScubaDiver,
-					mTextureRegionScubaDiver);
+			this.mScubaDiver = new ScubaDiver(CAMERA_CENTER_X / 4, CAMERA_CENTER_Y, this, ResourceManager.mTextureRegionScubaDiver);
 			this.mScubaDiver.setSize(64, 64);
 			this.mScubaDiver.animate(150);
 		} catch (IOException e) {
@@ -343,7 +238,6 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 		
 		this.mGameScene.attachChild(this.mScubaDiver);
 		
-		
 		Log.i("SCENE", "Draw diver completed.");
 	}
 
@@ -353,17 +247,11 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 	 * */
 	public void drawBorderLine() {
 
-		hitMeTop = new Line(0, CAMERA_HEIGHT
-				- this.mAutoParallaxLayerMid.getHeight() / 2, CAMERA_WIDTH,
-				CAMERA_HEIGHT - this.mAutoParallaxLayerMid.getHeight() / 2, 10,
-				this.getVertexBufferObjectManager());
+		hitMeTop = new Line(0, CAMERA_HEIGHT- 50, CAMERA_WIDTH, CAMERA_HEIGHT - 50, 10, this.getVertexBufferObjectManager());
 
-		hitMeBottom = new Line(0, this.mAutoParallaxLayerFront.getHeight() / 2,
-				CAMERA_WIDTH, this.mAutoParallaxLayerFront.getHeight() / 2, 10,
-				this.getVertexBufferObjectManager());
+		hitMeBottom = new Line(0, 50, CAMERA_WIDTH, 50, 10,this.getVertexBufferObjectManager());
 
-		DiverRightBorder = new Line(150, CAMERA_HEIGHT, 150, 0, 0,
-				this.getVertexBufferObjectManager());
+		DiverRightBorder = new Line(150, CAMERA_HEIGHT, 150, 0, 0, this.getVertexBufferObjectManager());
 
 		DiverRightBorder.setColor(Color.GREEN);
 
@@ -380,15 +268,13 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 		
 		Log.i("SCENE", "Draw borderline complete.");
 	}
-
-	// Draws tiles for continuous cave
+	
+	
+	/**
+	 * @author Christopher Washington.
+	 * */
 	public void drawCaveTiles() {
 		
-		Lattice lattice = new Lattice(CAMERA_HEIGHT / 80, CAMERA_WIDTH / 80);
-		lattice.generateLattice();
-		binaryLattice = lattice.getBinaryLattice();
-		locationLattice = lattice.getLocationLattice(CAMERA_HEIGHT,
-				CAMERA_WIDTH);
 		
 		tiles = new Plate[locationLattice.length][locationLattice[0].length];
 		for (int i = 0; i < locationLattice.length; i++) {
@@ -397,10 +283,10 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 					tiles[i][j] = new Plate(
 							locationLattice[i][j][1] + 32,
 							locationLattice[i][j][0] + 32, 64, 64,
-							mTextureRegionPlates,
+							ResourceManager.mTextureRegionPlates,
 							this.getVertexBufferObjectManager());
 					
-				plateBody =	mPhysicSet.physicsTiles(tiles[i][j], mPhysicsWorld);
+							//plateBody =	mPhysicSet.physicsTiles(tiles[i][j], mPhysicsWorld);
 					
 					mGameScene.attachChild(tiles[i][j]);
 				}
@@ -443,6 +329,10 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 			@Override
 			public void onUpdate(final float pSecondsElpased) {
 				
+				if(!mCamera.isEntityVisible(mScubaDiver))
+				{
+					finish();
+				}
 				
 				if (mScubaDiver.collidesWith(hitMeTop)) {
 					hitMeTop.setColor(Color.RED);
@@ -457,7 +347,6 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 				} else {
 					mScubaDiver.setConstantSpeed(mDiverBody);
 					hitMeBottom.setColor(Color.GREEN);
-			
 				}
 
 				if (mScubaDiver.collidesWith(DiverRightBorder)) {
@@ -471,82 +360,22 @@ public class SpelunkerSteveActivity extends SimpleBaseGameActivity implements
 		});
 
 	}
-
+	
+	
+	
+	/**
+	 * @author Allen Space
+	 * */
+	@Override
+	protected void onDestroy()
+	{
+	    super.onDestroy();
+	        
+	    if (this.isGameLoaded())
+	    {
+	        System.exit(0);    
+	    }
+	}
 }
 
-/*
- * 
- * private BitmapTextureAtlas mTextureAtlasFish; private TiledTextureRegion
- * mTextureRegionFish; private Fish littleFishy; private Body mFishyBody; //Fish
- * Texture generator for onCreateResource. //this.mTextureAtlasFish = new
- * BitmapTextureAtlas(this.getTextureManager(), 1300, 1390,
- * TextureOptions.BILINEAR_PREMULTIPLYALPHA); //this.mTextureRegionFish =
- * BitmapTextureAtlasTextureRegionFactory
- * .createTiledFromAsset(this.mTextureAtlasFish, this, "fish.png", 0, 0, 2, 2);
- * //this.mTextureAtlasFish.load(); public void drawFish(int location) { //
- * Initialize a diver object. try { this.littleFishy = new Fish(CAMERA_WIDTH,
- * location, this, mTextureAtlasFish, mTextureRegionFish); Log.i(TAG_FISH,
- * "Fish object decleration: "); Log.i(TAG_FISH, "Init fish at: " + location);
- * this.littleFishy.setSize(80, 80); } catch (IOException e) {
- * e.printStackTrace(); } // Attach the fish to the scene.
- * 
- * this.mGameScene.attachChild(littleFishy); Log.i(TAG_FISH,
- * "Attched enabled to Fish object... ");
- * 
- * setFishPhysics(); Log.i(TAG_FISH, "Physics set for Fish object... "); }
- * 
- * //Update on for fish object. public void updateFishScene() {
- * mGameScene.registerUpdateHandler(new IUpdateHandler() {
- * 
- * @Override public void reset(){}
- * 
- * @Override public void onUpdate(final float pSecondsElpased) { deltaTime +=
- * pSecondsElpased;
- * 
- * if(deltaTime > 5.0f && deltaTime < 10.f){
- * 
- * littleFishy.moveFishRight(mFishyBody);
- * 
- * }else if (deltaTime > 10.f){
- * 
- * littleFishy.moveFishLeft(mFishyBody);
- * 
- * }else{
- * 
- * littleFishy.moveFishLeft(mFishyBody); } } }); }
- * 
- * public void setFishPhysics() { // Create a new phsyics world.
- * this.mPhysicsWorld = new PhysicsWorld(new Vector2(0,0),false);
- * 
- * // Register the update handler.
- * this.mGameScene.registerUpdateHandler(this.mPhysicsWorld);
- * 
- * // Create the fixture definition - how the diver body will respond to impacts
- * against other physics bodies. final FixtureDef FISH_FIX =
- * PhysicsFactory.createFixtureDef(0.0f,0.0f,0.0f);
- * 
- * //Create for fish object physics. mFishyBody =
- * PhysicsFactory.createCircleBody(mPhysicsWorld, littleFishy,
- * BodyType.DynamicBody, FISH_FIX); mPhysicsWorld.registerPhysicsConnector(new
- * PhysicsConnector(littleFishy, mFishyBody, true, false));
- * 
- * }
- * 
- * public void setFishPhysics() { // Create a new phsyics world.
- * this.mPhysicsWorld = new PhysicsWorld(new Vector2(0,0),false);
- * 
- * // Register the update handler.
- * this.mGameScene.registerUpdateHandler(this.mPhysicsWorld);
- * 
- * // Create the fixture definition - how the diver body will respond to impacts
- * against other physics bodies. final FixtureDef FISH_FIX =
- * PhysicsFactory.createFixtureDef(0.0f,0.0f,0.0f);
- * 
- * //Create for fish object physics. mFishyBody =
- * PhysicsFactory.createCircleBody(mPhysicsWorld, littleFishy,
- * BodyType.DynamicBody, FISH_FIX); mPhysicsWorld.registerPhysicsConnector(new
- * PhysicsConnector(littleFishy, mFishyBody, true, false));
- * 
- * }
- */
 

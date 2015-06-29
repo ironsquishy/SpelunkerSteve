@@ -18,6 +18,7 @@ logcat.view.colsize.TID=62
 logcat.view.colsize.Tag=133
 logcat.view.colsize.Text=682
 logcat.view.colsize.Time=165
+logcat.view.filters.list=name\: 'Resource Manager', tag\: 'RESOURCE', text\: '', pid\: '', app\: '', level\: 'info', name\: 'Scene', tag\: 'SCENE', text\: '', pid\: '', app\: '', level\: 'info', 
 threadPanel.Col0=38
 threadPanel.Col1=54
 threadPanel.Col2=87

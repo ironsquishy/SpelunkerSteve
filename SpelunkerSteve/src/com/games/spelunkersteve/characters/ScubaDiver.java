@@ -19,7 +19,7 @@ public class ScubaDiver extends AnimatedSprite {
 	private Body mBody;
 	
 	// Constructor.
-	public ScubaDiver(int posX, int posY, SimpleBaseGameActivity sbga, BitmapTextureAtlas bta, TiledTextureRegion tta) throws IOException{
+	public ScubaDiver(int posX, int posY, SimpleBaseGameActivity sbga, TiledTextureRegion tta) throws IOException{
 		super(posX, posY, tta, sbga.getVertexBufferObjectManager());
         this.mPhysicsHandler = new PhysicsHandler(this);
         this.registerUpdateHandler(this.mPhysicsHandler);
